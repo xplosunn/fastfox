@@ -52,7 +52,7 @@ inquirer.prompt(questions).then((answers) => {
 
         let notesRes = request(
           "GET",
-          `https://gitlab.com/api/v4/projects/${projectId}/merge_requests/${mr.iid}/notes/?state=merged`,
+          `https://gitlab.com/api/v4/projects/${projectId}/merge_requests/${mr.iid}/notes/`,
           {
             headers: {
               "Private-Token": apiToken,
@@ -60,7 +60,7 @@ inquirer.prompt(questions).then((answers) => {
           }
         );
         let notes = JSON.parse(notesRes.getBody());
-        notes.map((note) => {
+        notes.filter((note) => note.type === "DiffNote").map((note) => {
           if (firstComment === 0) {
             firstComment = note.created_at;
           }
@@ -68,11 +68,13 @@ inquirer.prompt(questions).then((answers) => {
             firstComment = note.created_at;
           }
         });
+
         if (firstComment !== 0) {
           averageFirstCommentArr.push(
             Date.parse(firstComment) - Date.parse(mr.created_at)
           );
         }
+        firstComment = 0;
 
         return parseInt(
           (Date.parse(mr.merged_at) - Date.parse(mr.created_at)) /
