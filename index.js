@@ -15,15 +15,22 @@ let questions = [
     name: "projectId",
     message: "What's your GitLab project id?",
   },
+  {
+    type: "input",
+    name: "dateFrom",
+    message:
+      "[optional] Show from which date? (example: 2021-10-05T20:50:33.934Z)",
+  },
 ];
 
 inquirer.prompt(questions).then((answers) => {
   let apiToken = answers["apiToken"];
   let projectId = answers["projectId"];
+  let dateFrom = answers["dateFrom"];
 
   let res = request(
     "GET",
-    `https://gitlab.com/api/v4/projects/${projectId}/merge_requests?state=merged`,
+    `https://gitlab.com/api/v4/projects/${projectId}/merge_requests?state=merged&created_after=${dateFrom}`,
     {
       headers: {
         "Private-Token": apiToken,
@@ -48,6 +55,8 @@ inquirer.prompt(questions).then((answers) => {
         } else {
           topMergeRequestOpenersObj[mr.author.id] = 1;
         }
+        console.log(mr);
+
         topMergeRequestOpenersObjNames[mr.author.id] = mr.author.name;
 
         let notesRes = request(
@@ -60,14 +69,16 @@ inquirer.prompt(questions).then((answers) => {
           }
         );
         let notes = JSON.parse(notesRes.getBody());
-        notes.filter((note) => note.type === "DiffNote").map((note) => {
-          if (firstComment === 0) {
-            firstComment = note.created_at;
-          }
-          if (firstComment > note.created_at) {
-            firstComment = note.created_at;
-          }
-        });
+        notes
+          .filter((note) => note.type === "DiffNote")
+          .map((note) => {
+            if (firstComment === 0) {
+              firstComment = note.created_at;
+            }
+            if (firstComment > note.created_at) {
+              firstComment = note.created_at;
+            }
+          });
 
         if (firstComment !== 0) {
           averageFirstCommentArr.push(
@@ -111,7 +122,6 @@ inquirer.prompt(questions).then((answers) => {
       } merge request(s)`
     );
   }
-
   console.log(`Average days to be merged: ${averageDays}`);
   console.log(
     `Top merge request openers: ${topMergeRequestOpenersOrderedByName}`
